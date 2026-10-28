@@ -3,7 +3,7 @@ Galaxy Ansible: https://galaxy.ansible.com/ui/repo/published/fortinet/fortimanag
 
 # Prerequisits
 - Linux VM
-- FortiManager API User with Permission (JSON)
+- FortiManager API User with JSON API Access: Read-Write and Trusted Hosts
 
 # Before you start
 There are two ways to continuing with the setup:
@@ -55,7 +55,7 @@ cd ~/dev-fmg-ansible/
 ```
 ## 2. Add ansible.cfg
 ```
-nano ansible.cf
+nano ansible.cfg
 ```
 **File content:**
 ```
@@ -89,8 +89,8 @@ ansible_httpapi_use_ssl: true
 ansible_httpapi_validate_certs: false
 ansible_httpapi_port: 443                    # Change Custom HTTPS Port if necessary
 
-ansible_user: "{{ vault_fortios_user }}"
-ansible_password: "{{ vault_fortios_password }}"
+ansible_user: "{{ vault_fmg_user }}"
+ansible_password: "{{ vault_fmg_password }}"
 ```
 ## 5. Add vault.yml
 This setup is considered only for testing and development, nevertheless we should handle secrts and passwords securly - gerade im bezug wenn wir mit git arbeiten.
@@ -98,7 +98,8 @@ Deswegen legen wir das Passwort für den Ansible Vault innerhalb unseren Linux B
 Der Ansible Projekt Ordner greift auf dieses passwort zu und hat es somit nicht direkt im ordner.
 ```
 mkdir -p ~/.ansible
-echo 'YOUR CUSTOM ANSIBLE VAULT PW' > ~/.ansible/vault_pass.txt
+read -rs -p "Vault password: " PW; echo
+printf '%s\n' "$PW" > ~/.ansible/vault_pass.txt; unset PW
 chmod 600 ~/.ansible/vault_pass.txt
 ```
 Vault Creation
@@ -107,8 +108,8 @@ EDITOR=nano ansible-vault create inventory/group_vars/fortimanagers/vault.yml
 ```
 **File content:**
 ```
-ansible_user:  "ansible-admin"
-ansible_password:  "YOUR FMG ANSIBLE ADMIN PW"
+vault_fmg_user: "ansible-admin"
+vault_fmg_password: "YOUR FMG ANSIBLE ADMIN PW"
 
 ```
 ## 6. Create Playbooks
