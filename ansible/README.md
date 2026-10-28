@@ -87,12 +87,32 @@ ansible_connection: httpapi
 ansible_network_os: fortinet.fortimanager.fortimanager
 ansible_httpapi_use_ssl: true
 ansible_httpapi_validate_certs: false
-ansible_httpapi_port: 443            # Change Custom HTTPS Port if necessary
+ansible_httpapi_port: 443                    # Change Custom HTTPS Port if necessary
 
 ansible_user: "{{ vault_fortios_user }}"
 ansible_password: "{{ vault_fortios_password }}"
 ```
 ## 5. Add vault.yml
+This setup is considered only for testing and development, nevertheless we should handle secrts and passwords securly - gerade im bezug wenn wir mit git arbeiten.
+Deswegen legen wir das Passwort für den Ansible Vault innerhalb unseren Linux Benutzer Profils ab. Das Passwort liegt hierbei im klartext.
+Der Ansible Projekt Ordner greift auf dieses passwort zu und hat es somit nicht direkt im ordner.
+```
+mkdir -p ~/.ansible
+echo 'YOUR CUSTOM ANSIBLE VAULT PW' > ~/.ansible/vault_pass.txt
+chmod 600 ~/.ansible/vault_pass.txt
+```
+Vault Creation
+```
+EDITOR=nano ansible-vault create inventory/group_vars/fortimanagers/vault.yml
+```
+**File content:**
+```
+ansible_user:  "ansible-admin"
+ansible_password:  "YOUR FMG ANSIBLE ADMIN PW"
+
+```
 ## 6. Create Playbooks
+With this playbook we can see if the access is working.
+For further examples, see the folder examples within this project.
 
 # Auto Script
