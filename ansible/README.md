@@ -1,32 +1,34 @@
 # Official Documentation
 Galaxy Ansible: https://galaxy.ansible.com/ui/repo/published/fortinet/fortimanager/
 
-# Prerequisits
-- Linux VM
-- FortiManager API User with JSON API Access: Read-Write and Trusted Hosts
+# Prerequisites
+- Linux VM with sudo rights
+- Network access to the FortiManager (HTTPS)
+- FortiManager API user with *JSON API Access: Read-Write* and Trusted Hosts
 
 # Before you start
-There are two ways to continuing with the setup:
-1. Manual follow through
-2. Full script with loop
+There are two ways to set up the project:
+1. Manual setup (step by step)
+2. Auto script
 
-If you don`t want to manual configure the setup, it is still recommended to read/understand it, before using the "Auto Script".
+Even if you use the auto script, read the manual steps first to understand the setup.
 
 # Preparation
 ## Install Ansible
-```
-apt-get update
-apt-get -y install ansible
+```bash
+sudo apt-get update
+sudo apt-get -y install ansible
 ```
 ## Update Ansible Collection
-```
-ansible-galaxy collection install fortinet.fortimanager
+```bash
 ansible-galaxy collection install fortinet.fortimanager --upgrade
 ```
 Optional - select custom version:
+```bash
+ansible-galaxy collection install fortinet.fortimanager:==<version>
 ```
-ansible-galaxy collection install fortinet.fortimanager:==2.0.0
-```
+> **Note:** Since FortiManager 7.6.5, the API endpoint for scripts has changed.
+> Some modules (e.g. `fmgr_dvmdb_script`) may not work. Use `fmgr_generic` instead.
 
 # Project Setup
 ```
@@ -41,20 +43,21 @@ dev-fmg-ansible
 └── playbooks/
     └── 0X_XXXX.yml
 ```
-The whole work will be done in the folder /home/your-user/dev-fmg-ansible.
+All commands are run from `~/dev-fmg-ansible`.
 ## Explanation
-- **ansible.cfg**:
-- **hosts.ini**:
-- **vars.yml**:
-- **vault.yml**: 
+- **ansible.cfg**: Project settings (inventory path, vault password file, output format).
+- **hosts.ini**: List of FortiManagers (name and IP).
+- **vars.yml**: Connection settings for all FortiManagers.
+- **vault.yml**: Encrypted credentials.
+- **playbooks/**: The automation tasks.
 
 ## 1. Folder Structure Creation
-```
+```bash
 mkdir -p ~/dev-fmg-ansible/{inventory/group_vars/fortimanagers,playbooks}
 cd ~/dev-fmg-ansible/
 ```
 ## 2. Add ansible.cfg
-```
+```bash
 nano ansible.cfg
 ```
 **File content:**
@@ -69,20 +72,20 @@ gathering = explicit
 command_timeout = 60
 ```
 ## 3. Add hosts.ini
-```
+```bash
 nano inventory/hosts.ini
 ```
 **File content:**
 ```
 [fortimanagers]
-MY-FORTIMANAGER-1 ansible_host=XXX.XXX.XXX.XXX        # Change Name & IP
+MY-FORTIMANAGER-1 ansible_host=XXX.XXX.XXX.XXX        # change name and IP
 ```
 ## 4. Add vars.yml
-```
+```bash
 nano inventory/group_vars/fortimanagers/vars.yml
 ```
 **File content:**
-```
+```yaml
 ansible_connection: httpapi
 ansible_network_os: fortinet.fortimanager.fortimanager
 ansible_httpapi_use_ssl: true
@@ -93,24 +96,29 @@ ansible_user: "{{ vault_fmg_user }}"
 ansible_password: "{{ vault_fmg_password }}"
 ```
 ## 5. Add vault.yml
-This setup is considered only for testing and development, nevertheless we should handle secrts and passwords securly - gerade im bezug wenn wir mit git arbeiten.
-Deswegen legen wir das Passwort für den Ansible Vault innerhalb unseren Linux Benutzer Profils ab. Das Passwort liegt hierbei im klartext.
-Der Ansible Projekt Ordner greift auf dieses passwort zu und hat es somit nicht direkt im ordner.
-```
+This setup is for testing and development only. Still, secrets must be handled securely – especially when using Git.
+The vault password is stored in the user's home directory (`~/.ansible/vault_pass.txt`), outside the project folder. It is stored in plain text, but only readable by the user (`chmod 600`) and never committed to Git.
+
+**Create the vault password file:**
+```bash
 mkdir -p ~/.ansible
 read -rs -p "Vault password: " PW; echo
 printf '%s\n' "$PW" > ~/.ansible/vault_pass.txt; unset PW
 chmod 600 ~/.ansible/vault_pass.txt
 ```
-Vault Creation
-```
+**Create the vault:**
+```bash
 EDITOR=nano ansible-vault create inventory/group_vars/fortimanagers/vault.yml
 ```
 **File content:**
-```
+```yaml
 vault_fmg_user: "ansible-admin"
 vault_fmg_password: "YOUR FMG ANSIBLE ADMIN PW"
-
+```
+**Verify encryption:**
+```bash
+head -1 inventory/group_vars/fortimanagers/vault.yml
+# Expected: $ANSIBLE_VAULT;1.1;AES256
 ```
 ## 6. Create Playbooks
 With this playbook we can see if the access is working.
