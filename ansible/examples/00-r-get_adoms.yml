@@ -1,0 +1,16 @@
+- name: FortiManager ADOMs
+  hosts: fortimanagers
+  gather_facts: false
+
+  tasks:
+    - name: get ADOMs
+      fortinet.fortimanager.fmgr_fact:
+        facts:
+          selector: dvmdb_adom
+          params:
+            adom: ""
+      register: adoms
+
+    - name: show response
+      ansible.builtin.debug:
+        msg: "{{ adoms.meta.response_data | map(attribute='name') | list }}"
