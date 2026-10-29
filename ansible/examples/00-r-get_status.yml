@@ -14,4 +14,4 @@
         msg: >-
           Hostname: {{ status.meta.response_data.Hostname | default('?') }},
           Version: {{ status.meta.response_data.Version | default('?') }},
-          Seriennummer: {{ status.meta.response_data['Serial Number'] | default('?') }}
+          Serial Number: {{ status.meta.response_data['Serial Number'] | default('?') }}
