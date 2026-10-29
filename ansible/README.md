@@ -3,7 +3,7 @@ Galaxy Ansible: https://galaxy.ansible.com/ui/repo/published/fortinet/fortimanag
 <br/><br/>
 
 # Prerequisites
-- Linux VM with sudo rights
+- Linux VM (Ubuntu) with sudo rights 
 - Network access to the FortiManager (HTTPS)
 - FortiManager API user with *JSON API Access: Read-Write* and Trusted Hosts
 </br></br>
@@ -14,7 +14,14 @@ There are two ways to set up the project:
 2. Auto script
 
 Even if you use the auto script, read the manual steps first to understand the setup.
-<br/><br/>
+<br/>
+## Authentication Methods
+Two methods are supported. Choose one per FortiManager.
+Method	Ansible variables	Recommended for
+Username / Password	ansible_user, ansible_password	Quick start, lab
+API Token	ansible_httpapi_session_key	Automation, CI/CD (no password in use)
+
+The authentication is configured only in the inventory (vars.yml / vault.yml). Playbooks are the same for both methods.
 
 # Preparation
 ## Install Ansible
@@ -103,9 +110,15 @@ ansible_httpapi_use_ssl: true
 ansible_httpapi_validate_certs: false
 ansible_httpapi_port: 443                    # change if FMG uses a custom HTTPS port
 
+# --- Option A: Username / Password ---
 ansible_user: "{{ vault_fmg_user }}"
 ansible_password: "{{ vault_fmg_password }}"
+
+# --- Option B: API Token ---
+# ansible_httpapi_session_key:
+#   authorization: "bearer {{ vault_fmg_token }}"
 ```
+> **Note:** Use only one option. Do not define both at the same time.
 <br/>
 
 ## 5. Add vault.yml
@@ -123,10 +136,14 @@ chmod 600 ~/.ansible/vault_pass.txt
 ```bash
 EDITOR=nano ansible-vault create inventory/group_vars/fortimanagers/vault.yml
 ```
-**File content:**
+**File content - Option A (Username/Password):**
 ```yaml
 vault_fmg_user: "ansible-admin"
 vault_fmg_password: "YOUR FMG ANSIBLE ADMIN PW"
+```
+**File content - Option B (API Token):**
+```yaml
+vault_fmg_token: "YOUR-API-TOKEN"
 ```
 **Verify encryption:**
 ```bash
