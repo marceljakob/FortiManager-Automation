@@ -24,6 +24,7 @@ Two methods are supported. Choose one per FortiManager.
 | API Token | `ansible_httpapi_session_key` | Automation, CI/CD (no password in use) |
 
 The authentication is configured only in the inventory (vars.yml / vault.yml). Playbooks are the same for both methods.
+<br/><br/>
 
 # Preparation
 ## Install Ansible
