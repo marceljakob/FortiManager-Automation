@@ -5,6 +5,7 @@
 #  - Installs Ansible and the fortinet.fortimanager collection
 #  - Creates the project structure (default: ~/dev-fmg-ansible)
 #  - Creates ansible.cfg, hosts.ini, vars.yml and an encrypted vault.yml
+#  - Supports Username/Password or API token authentication
 #  - Creates the test playbook 00-r-get_status.yml
 #  - Optionally runs the test playbook
 #
@@ -68,7 +69,7 @@ cleanup() {
     rm -f "$VAULT_YML"
     warn "Removed unencrypted vault.yml (setup did not finish)."
   fi
-  unset FMG_PASS VAULT_PASS 2>/dev/null || true
+  unset FMG_PASS FMG_TOKEN VAULT_PASS 2>/dev/null || true
 }
 trap cleanup EXIT
 
@@ -123,8 +124,26 @@ while true; do
   warn "Port must be a number between 1 and 65535."
 done
 
-FMG_USER=$(ask "FortiManager API username" "ansible-admin")
-FMG_PASS=$(ask_secret "FortiManager API password")
+# Authentication method
+echo "Authentication method:" >&2
+echo "  [1] Username / Password" >&2
+echo "  [2] API Token" >&2
+while true; do
+  AUTH_CHOICE=$(ask "Select authentication method" "1")
+  case "$AUTH_CHOICE" in
+    1) AUTH_METHOD="password"; break ;;
+    2) AUTH_METHOD="token";    break ;;
+    *) warn "Please enter 1 or 2." ;;
+  esac
+done
+
+FMG_USER=""; FMG_PASS=""; FMG_TOKEN=""
+if [[ "$AUTH_METHOD" == "password" ]]; then
+  FMG_USER=$(ask "FortiManager API username" "ansible-admin")
+  FMG_PASS=$(ask_secret "FortiManager API password")
+else
+  FMG_TOKEN=$(ask_secret "FortiManager API token")
+fi
 
 # Vault password file
 VAULT_PASS_FILE="$HOME/.ansible/vault_pass.txt"
@@ -148,7 +167,11 @@ echo -e "${BOLD}Summary${NC}" >&2
 echo "  Project folder : $PROJECT_DIR" >&2
 echo "  FMG name       : $FMG_NAME" >&2
 echo "  FMG address    : $FMG_IP:$FMG_PORT" >&2
-echo "  FMG API user   : $FMG_USER" >&2
+if [[ "$AUTH_METHOD" == "password" ]]; then
+  echo "  Authentication : Username / Password (user: $FMG_USER)" >&2
+else
+  echo "  Authentication : API Token" >&2
+fi
 echo "  Vault password : $($CREATE_VAULT_PASS && echo "new" || echo "existing") ($VAULT_PASS_FILE)" >&2
 echo >&2
 ask_yn "Create the project with these settings?" "y" || die "Aborted by user."
@@ -183,10 +206,23 @@ ansible_network_os: fortinet.fortimanager.fortimanager
 ansible_httpapi_use_ssl: true
 ansible_httpapi_validate_certs: false
 ansible_httpapi_port: ${FMG_PORT}
+EOF
 
+if [[ "$AUTH_METHOD" == "password" ]]; then
+  cat >> inventory/group_vars/fortimanagers/vars.yml << 'EOF'
+
+# Authentication: Username / Password
 ansible_user: "{{ vault_fmg_user }}"
 ansible_password: "{{ vault_fmg_password }}"
 EOF
+else
+  cat >> inventory/group_vars/fortimanagers/vars.yml << 'EOF'
+
+# Authentication: API Token
+ansible_httpapi_session_key:
+  authorization: "bearer {{ vault_fmg_token }}"
+EOF
+fi
 
 cat > .gitignore << 'EOF'
 vault_pass.txt
@@ -212,11 +248,15 @@ fi
 VAULT_YML="$PROJECT_DIR/inventory/group_vars/fortimanagers/vault.yml"
 (
   umask 077
-  printf 'vault_fmg_user: %s\n'     "$(yaml_quote "$FMG_USER")"  > "$VAULT_YML"
-  printf 'vault_fmg_password: %s\n' "$(yaml_quote "$FMG_PASS")" >> "$VAULT_YML"
+  if [[ "$AUTH_METHOD" == "password" ]]; then
+    printf 'vault_fmg_user: %s\n'     "$(yaml_quote "$FMG_USER")"  > "$VAULT_YML"
+    printf 'vault_fmg_password: %s\n' "$(yaml_quote "$FMG_PASS")" >> "$VAULT_YML"
+  else
+    printf 'vault_fmg_token: %s\n'    "$(yaml_quote "$FMG_TOKEN")" > "$VAULT_YML"
+  fi
 )
-unset FMG_PASS
-ansible-vault encrypt "$VAULT_YML" >/dev/null
+unset FMG_PASS FMG_TOKEN
+ansible-vault encrypt "$VAULT_YML" --encrypt-vault-id default >/dev/null
 
 # =============================================================================
 #  5. Verify encryption
@@ -270,7 +310,11 @@ if ask_yn "Run the test playbook now?" "y"; then
   if ! ansible-playbook playbooks/00-r-get_status.yml; then
     echo >&2
     warn "Playbook failed. Common causes:"
-    warn "  - API user without 'JSON API Access: Read-Write'"
+    if [[ "$AUTH_METHOD" == "token" ]]; then
+      warn "  - Invalid API token or REST API admin without 'JSON API Access: Read-Write'"
+    else
+      warn "  - Wrong credentials or API user without 'JSON API Access: Read-Write'"
+    fi
     warn "  - Ansible host IP not in the Trusted Hosts of the API user"
     warn "  - FortiManager not reachable on $FMG_IP:$FMG_PORT"
   fi
