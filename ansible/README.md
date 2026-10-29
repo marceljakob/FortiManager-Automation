@@ -41,7 +41,7 @@ dev-fmg-ansible
 │           ├── vars.yml         # manually created
 │           └── vault.yml        # automatically created (ansible-vault)
 └── playbooks/
-    └── 0X_XXXX.yml
+    └── 00-r-get_status.yml
 ```
 All commands are run from `~/dev-fmg-ansible`.
 ## Explanation
@@ -123,5 +123,31 @@ head -1 inventory/group_vars/fortimanagers/vault.yml
 ## 6. Create Playbooks
 With this playbook we can see if the access is working.
 For further examples, see the folder examples within this project.
+```bash
+nano playbooks/00-r-get_status.yml
+```
+**File content:**
+```yaml
+- name: FortiManager Status
+  hosts: fortimanagers
+  gather_facts: false
 
+  tasks:
+    - name: get system information
+      fortinet.fortimanager.fmgr_fact:
+        facts:
+          selector: sys_status
+      register: status
+
+    - name: show response
+      ansible.builtin.debug:
+        msg: >-
+          Hostname: {{ status.meta.response_data.Hostname | default('?') }},
+          Version: {{ status.meta.response_data.Version | default('?') }},
+          Seriennummer: {{ status.meta.response_data['Serial Number'] | default('?') }}
+```
+## Execute Playbook
+```bash
+ansible-playbook playbooks/00-r-get_status.yml
+```
 # Auto Script
