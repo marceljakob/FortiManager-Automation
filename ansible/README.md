@@ -17,6 +17,7 @@ Even if you use the auto script, read the manual steps first to understand the s
 <br/>
 ## Authentication Methods
 Two methods are supported. Choose one per FortiManager.
+
 | Method | Ansible variables | Recommended for |
 |---|---|---|
 | Username / Password | `ansible_user`, `ansible_password` | Quick start, lab |
@@ -76,7 +77,7 @@ cd ~/dev-fmg-ansible/
 nano ansible.cfg
 ```
 **File content:**
-```text
+```ini
 [defaults]
 inventory = inventory/hosts.ini
 vault_password_file = ~/.ansible/vault_pass.txt
@@ -93,7 +94,7 @@ command_timeout = 60
 nano inventory/hosts.ini
 ```
 **File content:**
-```text
+```ini
 [fortimanagers]
 MY-FORTIMANAGER-1 ansible_host=XXX.XXX.XXX.XXX        # change name and IP
 ```
