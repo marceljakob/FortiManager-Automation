@@ -44,6 +44,7 @@ ansible-galaxy collection install fortinet.fortimanager:==<version>
 > Some modules (e.g. `fmgr_dvmdb_script`) may not work. Use `fmgr_generic` instead.
 <br/><br/>
 
+
 # Project Setup
 ```text
 dev-fmg-ansible
