@@ -17,9 +17,10 @@ Even if you use the auto script, read the manual steps first to understand the s
 <br/>
 ## Authentication Methods
 Two methods are supported. Choose one per FortiManager.
-Method	Ansible variables	Recommended for
-Username / Password	ansible_user, ansible_password	Quick start, lab
-API Token	ansible_httpapi_session_key	Automation, CI/CD (no password in use)
+| Method | Ansible variables | Recommended for |
+|---|---|---|
+| Username / Password | `ansible_user`, `ansible_password` | Quick start, lab |
+| API Token | `ansible_httpapi_session_key` | Automation, CI/CD (no password in use) |
 
 The authentication is configured only in the inventory (vars.yml / vault.yml). Playbooks are the same for both methods.
 
