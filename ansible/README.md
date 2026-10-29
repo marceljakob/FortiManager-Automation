@@ -1,10 +1,12 @@
 # Official Documentation
 Galaxy Ansible: https://galaxy.ansible.com/ui/repo/published/fortinet/fortimanager/
+<br/><br/>
 
 # Prerequisites
 - Linux VM with sudo rights
 - Network access to the FortiManager (HTTPS)
 - FortiManager API user with *JSON API Access: Read-Write* and Trusted Hosts
+</br></br>
 
 # Before you start
 There are two ways to set up the project:
@@ -12,6 +14,7 @@ There are two ways to set up the project:
 2. Auto script
 
 Even if you use the auto script, read the manual steps first to understand the setup.
+<br/><br/>
 
 # Preparation
 ## Install Ansible
@@ -29,9 +32,10 @@ ansible-galaxy collection install fortinet.fortimanager:==<version>
 ```
 > **Note:** Since FortiManager 7.6.5, the API endpoint for scripts has changed.
 > Some modules (e.g. `fmgr_dvmdb_script`) may not work. Use `fmgr_generic` instead.
+<br/><br/>
 
 # Project Setup
-```
+```text
 dev-fmg-ansible
 ├── ansible.cfg                  # manually created
 ├── inventory/
@@ -41,7 +45,7 @@ dev-fmg-ansible
 │           ├── vars.yml         # manually created
 │           └── vault.yml        # automatically created (ansible-vault)
 └── playbooks/
-    └── 00-r-get_status.yml
+    └── 00-r-get_status.yml      # manually created
 ```
 All commands are run from `~/dev-fmg-ansible`.
 ## Explanation
@@ -50,18 +54,21 @@ All commands are run from `~/dev-fmg-ansible`.
 - **vars.yml**: Connection settings for all FortiManagers.
 - **vault.yml**: Encrypted credentials.
 - **playbooks/**: The automation tasks.
+<br/>
 
 ## 1. Folder Structure Creation
 ```bash
 mkdir -p ~/dev-fmg-ansible/{inventory/group_vars/fortimanagers,playbooks}
 cd ~/dev-fmg-ansible/
 ```
+<br/>
+
 ## 2. Add ansible.cfg
 ```bash
 nano ansible.cfg
 ```
 **File content:**
-```
+```text
 [defaults]
 inventory = inventory/hosts.ini
 vault_password_file = ~/.ansible/vault_pass.txt
@@ -71,15 +78,19 @@ gathering = explicit
 [persistent_connection]
 command_timeout = 60
 ```
+<br/>
+
 ## 3. Add hosts.ini
 ```bash
 nano inventory/hosts.ini
 ```
 **File content:**
-```
+```text
 [fortimanagers]
 MY-FORTIMANAGER-1 ansible_host=XXX.XXX.XXX.XXX        # change name and IP
 ```
+<br/>
+
 ## 4. Add vars.yml
 ```bash
 nano inventory/group_vars/fortimanagers/vars.yml
@@ -90,11 +101,13 @@ ansible_connection: httpapi
 ansible_network_os: fortinet.fortimanager.fortimanager
 ansible_httpapi_use_ssl: true
 ansible_httpapi_validate_certs: false
-ansible_httpapi_port: 443                    # Change Custom HTTPS Port if necessary
+ansible_httpapi_port: 443                    # change if FMG uses a custom HTTPS port
 
 ansible_user: "{{ vault_fmg_user }}"
 ansible_password: "{{ vault_fmg_password }}"
 ```
+<br/>
+
 ## 5. Add vault.yml
 This setup is for testing and development only. Still, secrets must be handled securely – especially when using Git.
 The vault password is stored in the user's home directory (`~/.ansible/vault_pass.txt`), outside the project folder. It is stored in plain text, but only readable by the user (`chmod 600`) and never committed to Git.
@@ -120,6 +133,8 @@ vault_fmg_password: "YOUR FMG ANSIBLE ADMIN PW"
 head -1 inventory/group_vars/fortimanagers/vault.yml
 # Expected: $ANSIBLE_VAULT;1.1;AES256
 ```
+<br/>
+
 ## 6. Create Playbooks
 With this playbook we can see if the access is working.
 For further examples, see the folder examples within this project.
@@ -144,10 +159,54 @@ nano playbooks/00-r-get_status.yml
         msg: >-
           Hostname: {{ status.meta.response_data.Hostname | default('?') }},
           Version: {{ status.meta.response_data.Version | default('?') }},
-          Seriennummer: {{ status.meta.response_data['Serial Number'] | default('?') }}
+          Serial number: {{ status.meta.response_data['Serial Number'] | default('?') }}
 ```
-## Execute Playbook
+More playbooks are available in the [`examples`](./examples) folder.
+
+**Naming convention:** `<level>-<mode>-<name>.yml`
+
+| Part | Value | Meaning |
+|---|---|---|
+| Level | `00` | Basic |
+| | `01` | Advanced |
+| | `02` | Complex |
+| | `03` | Very complex |
+| Mode | `r` | Read-only – no changes on the FortiManager |
+| | `w` | Write – changes the FortiManager configuration |
+
+Example: `00-r-get_status.yml` = basic, read-only playbook.
+
+> **Note:** Test `w` playbooks in a lab first.
+<br/>
+
+## 7. Execute Playbook
 ```bash
 ansible-playbook playbooks/00-r-get_status.yml
 ```
+<br/><br/>
+
+# Troubleshooting
+
+| Error | Cause | Solution |
+|---|---|---|
+| `Can't login. Your login method is username_password` | Wrong credentials, missing API permission or IP not allowed | Check *JSON API Access: Read-Write* and Trusted Hosts of the API user |
+| `-3 Object does not exist` | Wrong ADOM name (case-sensitive) or outdated API path | Check ADOM name; for scripts on FMG ≥ 7.6.5 use `fmgr_generic` |
+| `Unsupported parameters ... adom` | Parameter at the wrong level | Move it under `facts: params:` (for `fmgr_fact`) |
+| `No inventory was parsed` | Playbook not started from the project folder | Run all commands from `~/dev-fmg-ansible` |
+| `No fact modules available` | Fact gathering is enabled | Set `gather_facts: false` in the playbook |
+| `File contains no section headers` | `[defaults]` missing in `ansible.cfg` | Add `[defaults]` as the first line |
+| `expected dicts but got ... Str` | Wrong format in `vault.yml` | Use `key: "value"` (space after the colon) |
+| `Mapping values are not allowed` | YAML indentation error | Use spaces only (no tabs), 2 per level |
+| Timeout / connection refused | HTTPS not reachable | Check network, `allowaccess https` and `ansible_httpapi_port` |
+
+**Useful commands:**
+```bash
+ansible --version                                      # shows which ansible.cfg is used
+ansible-inventory --host <name>                        # shows resolved variables
+ansible-playbook <playbook>.yml --syntax-check         # checks YAML syntax
+ansible-playbook <playbook>.yml -vvv                   # verbose output
+```
+
+<br/><br/>
 # Auto Script
+*Coming soon.*
