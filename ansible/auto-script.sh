@@ -216,7 +216,7 @@ VAULT_YML="$PROJECT_DIR/inventory/group_vars/fortimanagers/vault.yml"
   printf 'vault_fmg_password: %s\n' "$(yaml_quote "$FMG_PASS")" >> "$VAULT_YML"
 )
 unset FMG_PASS
-ansible-vault encrypt "$VAULT_YML" --vault-password-file "$VAULT_PASS_FILE" >/dev/null
+ansible-vault encrypt "$VAULT_YML" >/dev/null
 
 # =============================================================================
 #  5. Verify encryption
@@ -225,7 +225,7 @@ step "5/6 Verifying encryption"
 
 head -1 "$VAULT_YML" | grep -q '^\$ANSIBLE_VAULT' \
   || die "vault.yml is NOT encrypted."
-ansible-vault view "$VAULT_YML" --vault-password-file "$VAULT_PASS_FILE" >/dev/null \
+ansible-vault view "$VAULT_YML" >/dev/null \
   || die "vault.yml could not be decrypted with the vault password."
 ok "vault.yml is encrypted ($(head -1 "$VAULT_YML"))."
 
