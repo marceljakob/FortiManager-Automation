@@ -230,4 +230,9 @@ ansible-playbook <playbook>.yml -vvv                   # verbose output
 
 <br/><br/>
 # Auto Script
-*Coming soon.*
+```bash
+cd ~/
+wget https://raw.githubusercontent.com/marceljakob/FortiManager-Automation/main/ansible/fmg-ansible-auto-script.sh
+chmod +x fmg-ansible-auto-script.sh
+./fmg-ansible-auto-script.sh
+```
